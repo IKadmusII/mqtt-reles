@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Controle de Relés</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
+
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
     .btn { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
@@ -42,17 +45,14 @@
 
   <div id="status">MQTT: Conectando...</div>
 
-  <!-- Corrigido: link certo da biblioteca Paho -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
-
-  <!-- Agora o código JS pode rodar -->
   <script>
-    // Configurações MQTT
+    
     const host = "mqtt.flespi.io";
     const port = 443;
     const path = "/mqtt";
     const token = "jbaSYJl5Mb83cxwtoTnHiHBtye3vuvX7K0BUuqNyQhFJuvawUDB4zjvxNKEAVWTl";
 
+    
     const client = new Paho.MQTT.Client(host, port, path, "webclient_" + Math.random().toString(16).substr(2, 8));
 
     client.onConnectionLost = function(responseObject) {
@@ -71,12 +71,15 @@
       if (topic === "casa/rele4/status") document.getElementById("stat4").innerText = "Status: " + payload;
     };
 
+    
     client.connect({
       useSSL: true,
       userName: token,
-      keepAliveInterval: 30,
       onSuccess: function() {
         document.getElementById("status").innerText = "MQTT: conectado!";
+        console.log("Conectado ao MQTT!");
+
+        
         client.subscribe("casa/rele1/status");
         client.subscribe("casa/rele2/status");
         client.subscribe("casa/rele3/status");
@@ -84,10 +87,11 @@
       },
       onFailure: function(err) {
         document.getElementById("status").innerText = "MQTT: falha ao conectar";
-        console.error("Erro MQTT:", err);
+        console.error("Erro ao conectar MQTT:", err);
       }
     });
 
+    
     function sendCmd(topic, message) {
       if (!client.isConnected()) {
         alert("MQTT desconectado!");
