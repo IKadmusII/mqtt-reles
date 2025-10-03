@@ -1,121 +1,98 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel de Controle MQTT</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle de Relés</title>
+  <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    h1 {
-      color: #333;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .rele-box {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 16px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .on { background-color: #4CAF50; color: white; }
-    .off { background-color: #f44336; color: white; }
-    #status {
-      margin-top: 20px;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    .btn { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+    .on { background-color: green; color: white; }
+    .off { background-color: red; color: white; }
+    #status { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
+  <h1>Controle dos Relés via MQTT</h1>
 
-  <h1>Painel de Controle dos Relés</h1>
-  <div class="grid">
-    <div class="rele-box">
-      <h3>Relé 1</h3>
-      <button class="on" onclick="controlar('casa/rele1', 'ON')">Ligar</button>
-      <button class="off" onclick="controlar('casa/rele1', 'OFF')">Desligar</button>
-    </div>
-    <div class="rele-box">
-      <h3>Relé 2</h3>
-      <button class="on" onclick="controlar('casa/rele2', 'ON')">Ligar</button>
-      <button class="off" onclick="controlar('casa/rele2', 'OFF')">Desligar</button>
-    </div>
-    <div class="rele-box">
-      <h3>Relé 3</h3>
-      <button class="on" onclick="controlar('casa/rele3', 'ON')">Ligar</button>
-      <button class="off" onclick="controlar('casa/rele3', 'OFF')">Desligar</button>
-    </div>
-    <div class="rele-box">
-      <h3>Relé 4</h3>
-      <button class="on" onclick="controlar('casa/rele4', 'ON')">Ligar</button>
-      <button class="off" onclick="controlar('casa/rele4', 'OFF')">Desligar</button>
-    </div>
+  <div>
+    <h2>Relé 1</h2>
+    <button class="btn on" onclick="sendCmd('casa/rele1', 'ON')">Ligar</button>
+    <button class="btn off" onclick="sendCmd('casa/rele1', 'OFF')">Desligar</button>
+    <div id="stat1">Status: --</div>
+  </div>
+  <div>
+    <h2>Relé 2</h2>
+    <button class="btn on" onclick="sendCmd('casa/rele2', 'ON')">Ligar</button>
+    <button class="btn off" onclick="sendCmd('casa/rele2', 'OFF')">Desligar</button>
+    <div id="stat2">Status: --</div>
+  </div>
+  <div>
+    <h2>Relé 3</h2>
+    <button class="btn on" onclick="sendCmd('casa/rele3', 'ON')">Ligar</button>
+    <button class="btn off" onclick="sendCmd('casa/rele3', 'OFF')">Desligar</button>
+    <div id="stat3">Status: --</div>
+  </div>
+  <div>
+    <h2>Relé 4</h2>
+    <button class="btn on" onclick="sendCmd('casa/rele4', 'ON')">Ligar</button>
+    <button class="btn off" onclick="sendCmd('casa/rele4', 'OFF')">Desligar</button>
+    <div id="stat4">Status: --</div>
   </div>
 
-  <div id="status">Status: Aguardando conexão MQTT...</div>
+  <div id="status">MQTT: Conectando...</div>
 
-  <script src="https://unpkg.com/paho-mqtt/mqtt.min.js"></script>
   <script>
-    // Conexão MQTT via WebSocket com Flespi
-    const clientID = "webClient_" + Math.random().toString(16).substr(2, 8);
-    const client = new Paho.MQTT.Client("mqtt.flespi.io", 443, "/mqtt", clientID);
-
+    // Configurações MQTT
+    const host = "mqtt.flespi.io";
+    const port = 443;
+    const path = "/mqtt";
     const token = "jbaSYJl5Mb83cxwtoTnHiHBtye3vuvX7K0BUuqNyQhFJuvawUDB4zjvxNKEAVWTl";
 
-    client.onConnectionLost = function (responseObject) {
-      document.getElementById("status").innerText = "Status: Conexão perdida.";
-      console.log("Conexão perdida: " + responseObject.errorMessage);
+    const client = new Paho.MQTT.Client(host, port, path, "webclient_" + Math.random().toString(16).substr(2, 8));
+
+    client.onConnectionLost = function(responseObject) {
+      document.getElementById("status").innerText = "MQTT: conexão perdida";
     };
 
-    client.onMessageArrived = function (message) {
-      console.log("Mensagem recebida: " + message.payloadString);
+    client.onMessageArrived = function(message) {
+      const topic = message.destinationName;
+      const payload = message.payloadString;
+      console.log(`Recebido: ${topic} => ${payload}`);
+
+      // Atualiza os status dos relés
+      if (topic === "casa/rele1/status") document.getElementById("stat1").innerText = "Status: " + payload;
+      if (topic === "casa/rele2/status") document.getElementById("stat2").innerText = "Status: " + payload;
+      if (topic === "casa/rele3/status") document.getElementById("stat3").innerText = "Status: " + payload;
+      if (topic === "casa/rele4/status") document.getElementById("stat4").innerText = "Status: " + payload;
     };
 
-    function conectarMQTT() {
-      client.connect({
-        useSSL: true,
-        userName: token,
-        password: "",
-        onSuccess: () => {
-          document.getElementById("status").innerText = "Status: Conectado ao MQTT!";
-          console.log("Conectado com sucesso!");
-        },
-        onFailure: (err) => {
-          document.getElementById("status").innerText = "Status: Falha ao conectar.";
-          console.error("Erro ao conectar: ", err);
-        }
-      });
-    }
-
-    function controlar(topico, comando) {
-      if (client.isConnected()) {
-        const msg = new Paho.MQTT.Message(comando);
-        msg.destinationName = topico;
-        client.send(msg);
-      } else {
-        alert("Não conectado ao MQTT.");
+    client.connect({
+      useSSL: true,
+      userName: token,
+      onSuccess: function() {
+        document.getElementById("status").innerText = "MQTT: conectado!";
+        client.subscribe("casa/rele1/status");
+        client.subscribe("casa/rele2/status");
+        client.subscribe("casa/rele3/status");
+        client.subscribe("casa/rele4/status");
+      },
+      onFailure: function(err) {
+        document.getElementById("status").innerText = "MQTT: falha ao conectar";
+        console.error("Erro MQTT:", err);
       }
-    }
+    });
 
-    conectarMQTT();
+    function sendCmd(topic, message) {
+      if (!client.isConnected()) {
+        alert("MQTT desconectado!");
+        return;
+      }
+      const msg = new Paho.MQTT.Message(message);
+      msg.destinationName = topic;
+      client.send(msg);
+    }
   </script>
 </body>
 </html>
