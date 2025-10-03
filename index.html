@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Controle de Relés</title>
-  <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
     .btn { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
@@ -43,6 +42,10 @@
 
   <div id="status">MQTT: Conectando...</div>
 
+  <!-- Corrigido: link certo da biblioteca Paho -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
+
+  <!-- Agora o código JS pode rodar -->
   <script>
     // Configurações MQTT
     const host = "mqtt.flespi.io";
@@ -71,6 +74,7 @@
     client.connect({
       useSSL: true,
       userName: token,
+      keepAliveInterval: 30,
       onSuccess: function() {
         document.getElementById("status").innerText = "MQTT: conectado!";
         client.subscribe("casa/rele1/status");
